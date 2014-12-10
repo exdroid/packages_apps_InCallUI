@@ -22,6 +22,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.telecom.DisconnectCause;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneCapabilities;
@@ -85,6 +86,7 @@ public class InCallPresenter implements CallList.Listener, InCallPhoneListener {
     private boolean mServiceConnected = false;
     private boolean mAccountSelectionCancelled = false;
     private InCallCameraManager mInCallCameraManager = null;
+    private Vibrator mVibrator;
 
     private final Phone.Listener mPhoneListener = new Phone.Listener() {
         @Override
@@ -190,6 +192,8 @@ public class InCallPresenter implements CallList.Listener, InCallPhoneListener {
 
         mProximitySensor = new ProximitySensor(context, mAudioModeProvider);
         addListener(mProximitySensor);
+
+        mVibrator = (Vibrator) mContext.getSystemService(Context.VIBRATOR_SERVICE);
 
         mCallList = callList;
 
@@ -321,6 +325,15 @@ public class InCallPresenter implements CallList.Listener, InCallPhoneListener {
         InCallState newState = getPotentialStateFromCallList(callList);
         InCallState oldState = mInCallState;
         newState = startOrFinishUi(newState);
+
+        // Subtle vibration only when an outgoing call is picked up (OUTGOING -> INCALL)
+        if (mVibrator.hasVibrator()) {
+            if (oldState == InCallState.OUTGOING && newState == InCallState.INCALL)
+                mVibrator.vibrate(120);
+        }
+        else
+            Log.i(this, "This device does not have a vibrator."
+                                        + "And if it does, it's probably f**ked!");
 
         // Set the new state before announcing it to the world
         Log.i(this, "Phone switching state: " + oldState + " -> " + newState);
